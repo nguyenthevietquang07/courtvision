@@ -74,13 +74,16 @@ CourtVision is an AI-powered stats tracker designed to provide advanced analytic
 
 ```
 courtvision/
-│
-├── data/                   # Datasets and sample data
-├── notebooks/              # Main project notebooks
-├── utils/                  # Utility scripts and helper functions
-├── requirements.txt        # Python dependencies
-├── README.md               # Project documentation
-└── ...                     # Additional files
+├── .gitattributes
+├── README.md
+├── data.yaml
+├── output.mp4
+├── sample.mp4
+├── test.ipynb
+├── yolov8x.pt
+├── test/
+├── train/
+└── valid/
 ```
 ---
 
