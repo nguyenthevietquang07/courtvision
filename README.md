@@ -12,7 +12,6 @@ CourtVision is currently in the testing stage as we work to improve accuracy and
 - [Installation](#installation)
 - [Usage](#usage)
 - [Project Structure](#project-structure)
-- [Demo](#demo)
 - [Contributing](#contributing)
 - [License](#license)
 - [Contact](#contact)
@@ -83,13 +82,6 @@ courtvision/
 ├── README.md               # Project documentation
 └── ...                     # Additional files
 ```
-
----
-
-## Demo
-
-*Add screenshots or GIFs of sample outputs, visualizations, or dashboard interfaces here.*
-
 ---
 
 ## Contributing
@@ -101,13 +93,11 @@ Contributions are welcome! To contribute:
 3. Commit your changes.
 4. Push to your branch and open a Pull Request.
 
-Please read the [contributing guidelines](CONTRIBUTING.md) if available.
-
 ---
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for more details.
+This project is licensed under the MIT License.
 
 ---
 
@@ -117,5 +107,3 @@ Created by [nguyenthevietquang07](https://github.com/nguyenthevietquang07)
 For questions or feedback, please open an issue or contact via GitHub.
 
 ---
-
-Feel free to modify this README to better fit your project's specifics or add more sections as needed!
