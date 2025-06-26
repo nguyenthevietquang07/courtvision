@@ -64,7 +64,7 @@ CourtVision is an AI-powered stats tracker designed to provide advanced analytic
 ## Usage
 
 1. Launch Jupyter Notebook in the project directory.
-2. Open the main notebook (e.g., `CourtVision.ipynb`) and follow the step-by-step instructions.
+2. Open the main notebook (`test.ipynb`) and follow the step-by-step instructions.
 3. Upload your own data or use the provided sample datasets to run analyses.
 4. Visualize and interpret the results directly in your browser.
 
