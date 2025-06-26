@@ -1,0 +1,8 @@
+train: /content/drive/MyDrive/aiproject/train/images
+val: /content/drive/MyDrive/aiproject/valid/images
+test: /content/drive/MyDrive/aiproject/test/images
+nc: 2
+
+names:
+  0: ball
+  1: net
