@@ -116,7 +116,7 @@ def parse_args() -> argparse.Namespace:
         "--point-banner-frames",
         type=int,
         default=30,
-        help="Frames to keep the POINT banner visible after a confirmed basket",
+        help="Frames to keep the made-basket banner visible after a confirmed basket",
     )
     parser.add_argument("--start-frame", type=int, default=0, help="First video frame to process")
     return parser.parse_args()
@@ -228,7 +228,7 @@ def main() -> None:
         cooldown_frames=args.cooldown_frames,
     )
     event_id = 0
-    point_banner_until = -1
+    made_basket_banner_until = -1
     frame_index = max(0, args.start_frame)
     processed_frames = 0
     if frame_index:
@@ -310,7 +310,7 @@ def main() -> None:
                 if is_new_event:
                     event_id += 1
                     if args.event_mode == "made-basket":
-                        point_banner_until = frame_index + args.point_banner_frames
+                        made_basket_banner_until = frame_index + args.point_banner_frames
                     current_event_id = event_id
                     trigger_reasons = []
                     if args.event_mode == "made-basket":
@@ -346,8 +346,8 @@ def main() -> None:
                         (0, 0, 255),
                         2,
                     )
-            overlay_label = "POINTS" if args.event_mode == "made-basket" else "NEAR-RIM EVENTS"
-            cv2.rectangle(frame, (20, 18), (390, 88), (15, 15, 15), -1)
+            overlay_label = "MADE BASKETS" if args.event_mode == "made-basket" else "NEAR-RIM EVENTS"
+            cv2.rectangle(frame, (20, 18), (475, 88), (15, 15, 15), -1)
             cv2.putText(
                 frame,
                 f"{overlay_label}: {event_id}",
@@ -358,13 +358,13 @@ def main() -> None:
                 3,
                 cv2.LINE_AA,
             )
-            if args.event_mode == "made-basket" and frame_index <= point_banner_until:
+            if args.event_mode == "made-basket" and frame_index <= made_basket_banner_until:
                 cv2.putText(
                     frame,
-                    "POINT!",
-                    (width // 2 - 90, 90),
+                    "MADE BASKET",
+                    (width // 2 - 210, 90),
                     cv2.FONT_HERSHEY_SIMPLEX,
-                    1.8,
+                    1.55,
                     (0, 255, 0),
                     5,
                     cv2.LINE_AA,
