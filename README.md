@@ -15,6 +15,7 @@ The original videos are stored with Git LFS and may not preview directly in GitH
 
 - YOLOv8 object detection for `ball` and `net` classes
 - DeepSORT-based tracking experiments for video analysis
+- Crossing-event recorder for ball/net box overlap events
 - Included dataset split with YOLO label files
 - Notebook workflow for training, validation, and sample video inference
 - Git LFS configured for large `.mp4` and `.pt` assets
@@ -24,6 +25,8 @@ The original videos are stored with Git LFS and may not preview directly in GitH
 ```text
 courtvision/
   data.yaml       YOLO dataset configuration
+  scripts/        Dataset audit, training, and crossing detection scripts
+  notebooks/      Colab-ready GPU workflow
   test.ipynb      Training, validation, and tracking notebook
   train/          Training images and labels
   valid/          Validation images and labels
@@ -50,11 +53,51 @@ On macOS/Linux, activate the virtual environment with `source venv/bin/activate`
 
 ## Usage
 
-1. Open `test.ipynb`.
-2. Confirm `data.yaml` points to the local dataset folders.
-3. Run the training cells to train or fine-tune a YOLO model.
-4. Run the validation cells to inspect mAP metrics.
-5. Run the video tracking cells against `sample.mp4` or your own basketball footage.
+### 1. Audit the labels
+
+```bash
+python scripts/audit_dataset.py
+```
+
+Expected class names:
+
+- `0`: ball
+- `1`: net
+
+### 2. Train a custom detector
+
+Local CPU training is possible but slow. For the best result, open `notebooks/colab_train_and_crossings.ipynb` in Google Colab with a GPU runtime.
+
+```bash
+python scripts/train_ball_net.py --model yolov8s.pt --epochs 80 --batch 16 --imgsz 640
+```
+
+The trained model is saved at:
+
+```text
+runs/detect/courtvision_ball_net/weights/best.pt
+```
+
+### 3. Record ball/net crossing events
+
+```bash
+python scripts/detect_crossings.py \
+  --weights runs/detect/courtvision_ball_net/weights/best.pt \
+  --source sample.mp4 \
+  --out-dir runs/crossings \
+  --iou-threshold 0.01 \
+  --net-padding 20 \
+  --save-video
+```
+
+Outputs:
+
+- `runs/crossings/crossing_events.csv` - one row per crossing event
+- `runs/crossings/crossing_events.json` - structured event output
+- `runs/crossings/frame_metrics.csv` - per-frame ball/net IoU and center metrics
+- `runs/crossings/annotated_crossings.mp4` - optional annotated video
+
+The crossing detector records an event when a detected ball box and net box overlap above the IoU threshold, or when the ball center enters the net box expanded by `--net-padding`.
 
 ## Dataset
 
