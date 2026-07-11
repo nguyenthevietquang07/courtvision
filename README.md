@@ -4,8 +4,12 @@ Computer-vision project for detecting and tracking basketball objects, with a YO
 
 ## Demo
 
+![CourtVision annotated basketball detection demo](docs/demo/courtvision-demo.gif)
+
+The original videos are stored with Git LFS and may not preview directly in GitHub:
+
 - [Sample input video](sample.mp4)
-- [Annotated output video](output.mp4)
+- [Full annotated output video](output.mp4)
 
 ## Highlights
 
