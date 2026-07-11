@@ -87,6 +87,7 @@ python scripts/detect_crossings.py \
   --out-dir runs/crossings \
   --iou-threshold 0.01 \
   --net-padding 20 \
+  --center-distance-threshold 65 \
   --save-video
 ```
 
@@ -97,7 +98,7 @@ Outputs:
 - `runs/crossings/frame_metrics.csv` - per-frame ball/net IoU and center metrics
 - `runs/crossings/annotated_crossings.mp4` - optional annotated video
 
-The crossing detector records an event when a detected ball box and net box overlap above the IoU threshold, or when the ball center enters the net box expanded by `--net-padding`.
+The crossing detector records an event when a detected ball box and net box overlap above the IoU threshold, when the ball center enters the net box expanded by `--net-padding`, or when the ball/net centers are within `--center-distance-threshold` pixels.
 
 ## Dataset
 

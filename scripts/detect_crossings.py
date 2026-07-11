@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import math
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
@@ -35,6 +36,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--imgsz", type=int, default=640, help="YOLO inference image size")
     parser.add_argument("--iou-threshold", type=float, default=0.01, help="Box IoU needed to record a crossing")
     parser.add_argument("--net-padding", type=int, default=20, help="Pixels to expand the net box for center checks")
+    parser.add_argument(
+        "--center-distance-threshold",
+        type=float,
+        default=65.0,
+        help="Pixels between ball/net centers needed to record a near-rim crossing; use 0 to disable",
+    )
     parser.add_argument("--max-frames", type=int, default=None, help="Optional frame limit for quick tests")
     parser.add_argument("--save-video", action="store_true", help="Write annotated video")
     return parser.parse_args()
@@ -59,6 +66,10 @@ def box_iou(a: tuple[float, float, float, float], b: tuple[float, float, float, 
 def center(box: tuple[float, float, float, float]) -> tuple[float, float]:
     x1, y1, x2, y2 = box
     return ((x1 + x2) / 2, (y1 + y2) / 2)
+
+
+def point_distance(a: tuple[float, float], b: tuple[float, float]) -> float:
+    return math.hypot(a[0] - b[0], a[1] - b[1])
 
 
 def point_inside_expanded_box(
@@ -143,7 +154,9 @@ def main() -> None:
                 "ball_center_y",
                 "net_center_x",
                 "net_center_y",
+                "center_distance",
                 "center_inside_expanded_net",
+                "center_distance_threshold_met",
                 "crossing_active",
                 "event_id",
             ],
@@ -166,7 +179,9 @@ def main() -> None:
             iou = 0.0
             ball_center = ("", "")
             net_center = ("", "")
+            center_distance = 0.0
             center_inside_net = False
+            distance_threshold_met = False
             crossing_active = False
             current_event_id = ""
 
@@ -180,26 +195,48 @@ def main() -> None:
 
             if ball is not None and net is not None:
                 iou = box_iou(ball.box, net.box)
+                center_distance = point_distance(ball_center, net_center)
                 center_inside_net = point_inside_expanded_box(ball_center, net.box, args.net_padding)
-                crossing_active = iou >= args.iou_threshold or center_inside_net
+                distance_threshold_met = (
+                    args.center_distance_threshold > 0
+                    and center_distance <= args.center_distance_threshold
+                )
+                crossing_active = iou >= args.iou_threshold or center_inside_net or distance_threshold_met
 
                 if crossing_active and not previous_crossing:
                     event_id += 1
                     current_event_id = event_id
+                    trigger_reasons = []
+                    if iou >= args.iou_threshold:
+                        trigger_reasons.append("iou")
+                    if center_inside_net:
+                        trigger_reasons.append("center_inside_expanded_net")
+                    if distance_threshold_met:
+                        trigger_reasons.append("center_distance")
                     event = {
                         "event_id": event_id,
                         "frame": frame_index,
                         "time_seconds": round(frame_index / fps, 3),
                         "iou": round(iou, 5),
+                        "center_distance": round(center_distance, 2),
                         "ball_confidence": round(ball.confidence, 4),
                         "net_confidence": round(net.confidence, 4),
                         "ball_box": [round(v, 2) for v in ball.box],
                         "net_box": [round(v, 2) for v in net.box],
                         "center_inside_expanded_net": center_inside_net,
+                        "center_distance_threshold_met": distance_threshold_met,
+                        "trigger": "+".join(trigger_reasons),
                     }
                     events.append(event)
 
                 if crossing_active:
+                    cv2.line(
+                        frame,
+                        (int(ball_center[0]), int(ball_center[1])),
+                        (int(net_center[0]), int(net_center[1])),
+                        (0, 0, 255),
+                        2,
+                    )
                     cv2.putText(
                         frame,
                         "CROSSING",
@@ -221,7 +258,9 @@ def main() -> None:
                     "ball_center_y": round(ball_center[1], 2) if ball else "",
                     "net_center_x": round(net_center[0], 2) if net else "",
                     "net_center_y": round(net_center[1], 2) if net else "",
+                    "center_distance": round(center_distance, 2) if ball and net else "",
                     "center_inside_expanded_net": center_inside_net,
+                    "center_distance_threshold_met": distance_threshold_met,
                     "crossing_active": crossing_active,
                     "event_id": current_event_id,
                 }
@@ -249,6 +288,9 @@ def main() -> None:
                 "ball_box",
                 "net_box",
                 "center_inside_expanded_net",
+                "center_distance",
+                "center_distance_threshold_met",
+                "trigger",
             ],
         )
         event_writer.writeheader()
