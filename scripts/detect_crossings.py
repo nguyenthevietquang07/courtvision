@@ -1,10 +1,4 @@
-"""Detect ball/net crossings in a video.
-
-The script records a crossing event when the best ball box and best net box
-overlap at or above an IoU threshold. It also records whether the ball center
-is inside the net box expanded by a configurable padding, which is useful for
-noisy sports footage where a tiny ball box may not overlap much.
-"""
+"""Detect near-rim events or confirmed made baskets in a video."""
 
 from __future__ import annotations
 
@@ -27,6 +21,58 @@ class Detection:
     box: tuple[float, float, float, float]
 
 
+@dataclass
+class BasketCounter:
+    """Confirm a basket from an observed above-rim to below-rim transition."""
+
+    vertical_margin: float = 5.0
+    horizontal_padding: float = 25.0
+    max_transition_frames: int = 20
+    cooldown_frames: int = 45
+    armed_frame: int | None = None
+    last_score_frame: int = -1_000_000
+
+    def update(
+        self,
+        frame_index: int,
+        ball_center: tuple[float, float] | None,
+        net_box: tuple[float, float, float, float] | None,
+    ) -> tuple[bool, str]:
+        if self.armed_frame is not None and frame_index - self.armed_frame > self.max_transition_frames:
+            self.armed_frame = None
+
+        if ball_center is None or net_box is None:
+            return False, ""
+
+        ball_x, ball_y = ball_center
+        net_x1, net_y1, net_x2, _ = net_box
+        horizontally_aligned = (
+            net_x1 - self.horizontal_padding <= ball_x <= net_x2 + self.horizontal_padding
+        )
+        if not horizontally_aligned:
+            return False, ""
+
+        above_rim = ball_y <= net_y1 - self.vertical_margin
+        below_rim = ball_y >= net_y1 + self.vertical_margin
+
+        if above_rim:
+            self.armed_frame = frame_index
+            return False, "armed_above_rim"
+
+        can_score = (
+            below_rim
+            and self.armed_frame is not None
+            and 0 < frame_index - self.armed_frame <= self.max_transition_frames
+            and frame_index - self.last_score_frame >= self.cooldown_frames
+        )
+        if can_score:
+            self.last_score_frame = frame_index
+            self.armed_frame = None
+            return True, "above_to_below_rim"
+
+        return False, ""
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Detect CourtVision ball/net crossing events")
     parser.add_argument("--weights", required=True, help="Path to trained YOLO weights, usually runs/.../best.pt")
@@ -44,6 +90,17 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--max-frames", type=int, default=None, help="Optional frame limit for quick tests")
     parser.add_argument("--save-video", action="store_true", help="Write annotated video")
+    parser.add_argument(
+        "--event-mode",
+        choices=("made-basket", "near-rim"),
+        default="made-basket",
+        help="Require a downward rim crossing or record looser near-rim events",
+    )
+    parser.add_argument("--rim-vertical-margin", type=float, default=5.0)
+    parser.add_argument("--rim-horizontal-padding", type=float, default=25.0)
+    parser.add_argument("--transition-frames", type=int, default=20)
+    parser.add_argument("--cooldown-frames", type=int, default=45)
+    parser.add_argument("--start-frame", type=int, default=0, help="First video frame to process")
     return parser.parse_args()
 
 
@@ -138,8 +195,17 @@ def main() -> None:
 
     events: list[dict] = []
     previous_crossing = False
+    basket_counter = BasketCounter(
+        vertical_margin=args.rim_vertical_margin,
+        horizontal_padding=args.rim_horizontal_padding,
+        max_transition_frames=args.transition_frames,
+        cooldown_frames=args.cooldown_frames,
+    )
     event_id = 0
-    frame_index = 0
+    frame_index = max(0, args.start_frame)
+    processed_frames = 0
+    if frame_index:
+        cap.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
 
     with frames_csv.open("w", newline="", encoding="utf-8") as frame_file:
         frame_writer = csv.DictWriter(
@@ -164,7 +230,7 @@ def main() -> None:
         frame_writer.writeheader()
 
         while True:
-            if args.max_frames is not None and frame_index >= args.max_frames:
+            if args.max_frames is not None and processed_frames >= args.max_frames:
                 break
 
             ok, frame = cap.read()
@@ -183,6 +249,7 @@ def main() -> None:
             center_inside_net = False
             distance_threshold_met = False
             crossing_active = False
+            counter_state = ""
             current_event_id = ""
 
             if ball is not None:
@@ -201,18 +268,30 @@ def main() -> None:
                     args.center_distance_threshold > 0
                     and center_distance <= args.center_distance_threshold
                 )
-                crossing_active = iou >= args.iou_threshold or center_inside_net or distance_threshold_met
+                near_rim_active = iou >= args.iou_threshold or center_inside_net or distance_threshold_met
+                made_basket, counter_state = basket_counter.update(
+                    frame_index,
+                    ball_center,
+                    net.box,
+                )
+                crossing_active = made_basket if args.event_mode == "made-basket" else near_rim_active
 
-                if crossing_active and not previous_crossing:
+                is_new_event = crossing_active and (
+                    args.event_mode == "made-basket" or not previous_crossing
+                )
+                if is_new_event:
                     event_id += 1
                     current_event_id = event_id
                     trigger_reasons = []
-                    if iou >= args.iou_threshold:
-                        trigger_reasons.append("iou")
-                    if center_inside_net:
-                        trigger_reasons.append("center_inside_expanded_net")
-                    if distance_threshold_met:
-                        trigger_reasons.append("center_distance")
+                    if args.event_mode == "made-basket":
+                        trigger_reasons.append(counter_state)
+                    else:
+                        if iou >= args.iou_threshold:
+                            trigger_reasons.append("iou")
+                        if center_inside_net:
+                            trigger_reasons.append("center_inside_expanded_net")
+                        if distance_threshold_met:
+                            trigger_reasons.append("center_distance")
                     event = {
                         "event_id": event_id,
                         "frame": frame_index,
@@ -239,7 +318,7 @@ def main() -> None:
                     )
                     cv2.putText(
                         frame,
-                        "CROSSING",
+                        "POINT" if args.event_mode == "made-basket" else "NEAR RIM",
                         (30, 60),
                         cv2.FONT_HERSHEY_SIMPLEX,
                         1.6,
@@ -270,6 +349,7 @@ def main() -> None:
             if writer is not None:
                 writer.write(frame)
             frame_index += 1
+            processed_frames += 1
 
     cap.release()
     if writer is not None:
@@ -297,8 +377,8 @@ def main() -> None:
         event_writer.writerows(events)
 
     events_json.write_text(json.dumps(events, indent=2), encoding="utf-8")
-    print(f"Processed {frame_index} frames")
-    print(f"Recorded {len(events)} crossing events")
+    print(f"Processed {processed_frames} frames")
+    print(f"Recorded {len(events)} {args.event_mode} events")
     print(f"Frame metrics: {frames_csv}")
     print(f"Crossing events: {events_csv}")
     print(f"Crossing events JSON: {events_json}")

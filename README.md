@@ -15,7 +15,8 @@ The original videos are stored with Git LFS and may not preview directly in GitH
 
 - YOLOv8 object detection for `ball` and `net` classes
 - DeepSORT-based tracking experiments for video analysis
-- Crossing-event recorder for ball/net box overlap events
+- Made-basket counter using an above-rim to below-rim trajectory check
+- Optional near-rim event recorder for shot-attempt analysis
 - Included dataset split with YOLO label files
 - Notebook workflow for training, validation, and sample video inference
 - Git LFS configured for large `.mp4` and `.pt` assets
@@ -31,6 +32,7 @@ courtvision/
   train/          Training images and labels
   valid/          Validation images and labels
   test/           Test images and labels
+  models/         Trained CourtVision detector weights, stored with Git LFS
   sample.mp4      Sample input video, stored with Git LFS
   output.mp4      Example output video, stored with Git LFS
   yolov8x.pt      Model artifact, stored with Git LFS
@@ -78,16 +80,14 @@ The trained model is saved at:
 courtvision_runs/courtvision_ball_net/weights/best.pt
 ```
 
-### 3. Record ball/net crossing events
+### 3. Count confirmed baskets
 
 ```bash
 python scripts/detect_crossings.py \
-  --weights courtvision_runs/courtvision_ball_net/weights/best.pt \
+  --weights models/courtvision_ball_net_best.pt \
   --source sample.mp4 \
   --out-dir runs/crossings \
-  --iou-threshold 0.01 \
-  --net-padding 20 \
-  --center-distance-threshold 65 \
+  --event-mode made-basket \
   --save-video
 ```
 
@@ -98,7 +98,9 @@ Outputs:
 - `runs/crossings/frame_metrics.csv` - per-frame ball/net IoU and center metrics
 - `runs/crossings/annotated_crossings.mp4` - optional annotated video
 
-The crossing detector records an event when a detected ball box and net box overlap above the IoU threshold, when the ball center enters the net box expanded by `--net-padding`, or when the ball/net centers are within `--center-distance-threshold` pixels.
+In the default `made-basket` mode, the counter first observes the ball above and horizontally aligned with the rim, then confirms a point only when a later detection moves below the rim within `--transition-frames`. A cooldown prevents one basket from being counted more than once.
+
+For exploratory shot-attempt analysis, use `--event-mode near-rim`. That looser mode records overlap, padded-net containment, or center proximity. Near-rim events are not equivalent to made baskets.
 
 ## Dataset
 
