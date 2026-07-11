@@ -75,14 +75,14 @@ python scripts/train_ball_net.py --model yolov8s.pt --epochs 80 --batch 16 --img
 The trained model is saved at:
 
 ```text
-runs/detect/courtvision_ball_net/weights/best.pt
+courtvision_runs/courtvision_ball_net/weights/best.pt
 ```
 
 ### 3. Record ball/net crossing events
 
 ```bash
 python scripts/detect_crossings.py \
-  --weights runs/detect/courtvision_ball_net/weights/best.pt \
+  --weights courtvision_runs/courtvision_ball_net/weights/best.pt \
   --source sample.mp4 \
   --out-dir runs/crossings \
   --iou-threshold 0.01 \

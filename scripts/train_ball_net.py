@@ -27,7 +27,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--imgsz", type=int, default=640, help="Training image size")
     parser.add_argument("--batch", type=int, default=16, help="Batch size")
     parser.add_argument("--device", default=None, help="Device, for example 0, cpu, or cuda")
-    parser.add_argument("--project", default="runs/detect", help="Ultralytics project directory")
+    parser.add_argument("--project", default="courtvision_runs", help="Ultralytics project directory")
     parser.add_argument("--name", default="courtvision_ball_net", help="Run name")
     parser.add_argument("--patience", type=int, default=30, help="Early stopping patience")
     parser.add_argument("--seed", type=int, default=7, help="Training seed")
