@@ -2,6 +2,11 @@
 
 Computer-vision project for detecting and tracking basketball objects, with a YOLOv8 training notebook, labeled train/validation/test data, sample video assets, and model artifacts managed through Git LFS.
 
+## Demo
+
+- [Sample input video](sample.mp4)
+- [Annotated output video](output.mp4)
+
 ## Highlights
 
 - YOLOv8 object detection for `ball` and `net` classes
