@@ -1,112 +1,63 @@
 # CourtVision
 
-**AI-powered Stats Tracker**
-CourtVision is currently in the testing stage as we work to improve accuracy and expand features.
+Computer-vision project for detecting and tracking basketball objects, with a YOLOv8 training notebook, labeled train/validation/test data, sample video assets, and model artifacts managed through Git LFS.
 
----
+## Highlights
 
-## Table of Contents
+- YOLOv8 object detection for `ball` and `net` classes
+- DeepSORT-based tracking experiments for video analysis
+- Included dataset split with YOLO label files
+- Notebook workflow for training, validation, and sample video inference
+- Git LFS configured for large `.mp4` and `.pt` assets
 
-- [Overview](#overview)
-- [Features](#features)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Project Structure](#project-structure)
-- [Contributing](#contributing)
-- [License](#license)
-- [Contact](#contact)
+## Repository Structure
 
----
+```text
+courtvision/
+  data.yaml       YOLO dataset configuration
+  test.ipynb      Training, validation, and tracking notebook
+  train/          Training images and labels
+  valid/          Validation images and labels
+  test/           Test images and labels
+  sample.mp4      Sample input video, stored with Git LFS
+  output.mp4      Example output video, stored with Git LFS
+  yolov8x.pt      Model artifact, stored with Git LFS
+```
 
-## Overview
+## Setup
 
-CourtVision is an AI-powered stats tracker designed to provide advanced analytics and insights for sports analysis. Leveraging machine learning and computer vision techniques, CourtVision enables users to track, analyze, and visualize player and game statistics directly from video or statistical data.
+```bash
+git lfs install
+git clone https://github.com/nguyenthevietquang07/courtvision.git
+cd courtvision
 
----
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+jupyter notebook
+```
 
-## Features
-
-- 📊 **Comprehensive Stats Tracking**: Automatically extract and track a wide range of player and team statistics.
-- 🤖 **AI-Powered Analytics**: Utilize state-of-the-art machine learning models for advanced data analysis.
-- 🎥 **Video & Data Integration**: Process both video feeds and structured datasets for maximum flexibility.
-- 📈 **Interactive Visualizations**: Jupyter Notebook-based dashboards for exploring data and results.
-- 🛠️ **Extensible Notebooks**: Modular notebook design for easy customization and experimentation.
-
----
-
-## Installation
-
-1. **Clone the Repository**
-    ```bash
-    git clone https://github.com/nguyenthevietquang07/courtvision.git
-    cd courtvision
-    ```
-
-2. **Set Up a Python Environment**
-    ```bash
-    python -m venv venv
-    source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
-    ```
-
-3. **Install Required Packages**
-    ```bash
-    pip install -r requirements.txt
-    ```
-    *If a `requirements.txt` is not available, open the notebooks to find the required packages and install them individually.*
-
-4. **Start Jupyter Notebook**
-    ```bash
-    jupyter notebook
-    ```
-
----
+On macOS/Linux, activate the virtual environment with `source venv/bin/activate`.
 
 ## Usage
 
-1. Launch Jupyter Notebook in the project directory.
-2. Open the main notebook (`test.ipynb`) and follow the step-by-step instructions.
-3. Upload your own data or use the provided sample datasets to run analyses.
-4. Visualize and interpret the results directly in your browser.
+1. Open `test.ipynb`.
+2. Confirm `data.yaml` points to the local dataset folders.
+3. Run the training cells to train or fine-tune a YOLO model.
+4. Run the validation cells to inspect mAP metrics.
+5. Run the video tracking cells against `sample.mp4` or your own basketball footage.
 
----
+## Dataset
 
-## Project Structure
+The dataset uses YOLO format with two classes:
 
-```
-courtvision/
-├── .gitattributes
-├── README.md
-├── data.yaml
-├── output.mp4
-├── sample.mp4
-├── test.ipynb
-├── yolov8x.pt
-├── test/
-├── train/
-└── valid/
-```
----
+- `0`: ball
+- `1`: net
 
-## Contributing
+`data.yaml` uses repo-relative paths so it can run locally or in hosted notebook environments after the repository is mounted.
 
-Contributions are welcome! To contribute:
+## Notes for Reviewers
 
-1. Fork this repository.
-2. Create a new branch (`git checkout -b feature/your-feature`).
-3. Commit your changes.
-4. Push to your branch and open a Pull Request.
-
----
-
-## License
-
-This project is licensed under the MIT License.
-
----
-
-## Contact
-
-Created by [nguyenthevietquang07](https://github.com/nguyenthevietquang07)  
-For questions or feedback, please open an issue or contact via GitHub.
-
----
+- Large media/model files are intentionally tracked with Git LFS via `.gitattributes`.
+- The notebook was originally developed in Google Colab; local runs may need small path changes for notebook-only cells that reference `/content/...`.
+- GPU acceleration is recommended for training.

@@ -1,6 +1,6 @@
-train: /content/drive/MyDrive/aiproject/train/images
-val: /content/drive/MyDrive/aiproject/valid/images
-test: /content/drive/MyDrive/aiproject/test/images
+train: train/images
+val: valid/images
+test: test/images
 nc: 2
 
 names:
