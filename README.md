@@ -88,6 +88,9 @@ python scripts/detect_crossings.py \
   --source sample.mp4 \
   --out-dir runs/crossings \
   --event-mode made-basket \
+  --conf 0.10 \
+  --ball-conf 0.15 \
+  --net-conf 0.25 \
   --save-video
 ```
 
@@ -99,6 +102,8 @@ Outputs:
 - `runs/crossings/annotated_crossings.mp4` - optional annotated video
 
 In the default `made-basket` mode, the counter first observes the ball above and horizontally aligned with the rim, then confirms a point only when a later detection moves below the rim within `--transition-frames`. A cooldown prevents one basket from being counted more than once.
+
+The annotated video always displays the running point total. Ball and net confidence thresholds are configured separately because the small, fast-moving ball commonly has a lower confidence than the larger net.
 
 For exploratory shot-attempt analysis, use `--event-mode near-rim`. That looser mode records overlap, padded-net containment, or center proximity. Near-rim events are not equivalent to made baskets.
 

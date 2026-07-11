@@ -79,6 +79,18 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--source", default="sample.mp4", help="Input video path")
     parser.add_argument("--out-dir", default="runs/crossings", help="Output directory")
     parser.add_argument("--conf", type=float, default=0.25, help="YOLO confidence threshold")
+    parser.add_argument(
+        "--ball-conf",
+        type=float,
+        default=0.15,
+        help="Minimum confidence for displayed/counted ball detections",
+    )
+    parser.add_argument(
+        "--net-conf",
+        type=float,
+        default=0.25,
+        help="Minimum confidence for displayed/counted net detections",
+    )
     parser.add_argument("--imgsz", type=int, default=640, help="YOLO inference image size")
     parser.add_argument("--iou-threshold", type=float, default=0.01, help="Box IoU needed to record a crossing")
     parser.add_argument("--net-padding", type=int, default=20, help="Pixels to expand the net box for center checks")
@@ -100,6 +112,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--rim-horizontal-padding", type=float, default=25.0)
     parser.add_argument("--transition-frames", type=int, default=20)
     parser.add_argument("--cooldown-frames", type=int, default=45)
+    parser.add_argument(
+        "--point-banner-frames",
+        type=int,
+        default=30,
+        help="Frames to keep the POINT banner visible after a confirmed basket",
+    )
     parser.add_argument("--start-frame", type=int, default=0, help="First video frame to process")
     return parser.parse_args()
 
@@ -153,8 +171,16 @@ def get_detections(result) -> list[Detection]:
     return detections
 
 
-def best_detection(detections: Iterable[Detection], class_name: str) -> Detection | None:
-    candidates = [d for d in detections if d.class_name == class_name]
+def best_detection(
+    detections: Iterable[Detection],
+    class_name: str,
+    min_confidence: float = 0.0,
+) -> Detection | None:
+    candidates = [
+        detection
+        for detection in detections
+        if detection.class_name == class_name and detection.confidence >= min_confidence
+    ]
     return max(candidates, key=lambda d: d.confidence, default=None)
 
 
@@ -202,6 +228,7 @@ def main() -> None:
         cooldown_frames=args.cooldown_frames,
     )
     event_id = 0
+    point_banner_until = -1
     frame_index = max(0, args.start_frame)
     processed_frames = 0
     if frame_index:
@@ -237,10 +264,11 @@ def main() -> None:
             if not ok:
                 break
 
-            result = model.predict(frame, conf=args.conf, imgsz=args.imgsz, verbose=False)[0]
+            inference_conf = min(args.conf, args.ball_conf, args.net_conf)
+            result = model.predict(frame, conf=inference_conf, imgsz=args.imgsz, verbose=False)[0]
             detections = get_detections(result)
-            ball = best_detection(detections, "ball")
-            net = best_detection(detections, "net")
+            ball = best_detection(detections, "ball", args.ball_conf)
+            net = best_detection(detections, "net", args.net_conf)
 
             iou = 0.0
             ball_center = ("", "")
@@ -281,6 +309,8 @@ def main() -> None:
                 )
                 if is_new_event:
                     event_id += 1
+                    if args.event_mode == "made-basket":
+                        point_banner_until = frame_index + args.point_banner_frames
                     current_event_id = event_id
                     trigger_reasons = []
                     if args.event_mode == "made-basket":
@@ -316,15 +346,40 @@ def main() -> None:
                         (0, 0, 255),
                         2,
                     )
-                    cv2.putText(
-                        frame,
-                        "POINT" if args.event_mode == "made-basket" else "NEAR RIM",
-                        (30, 60),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        1.6,
-                        (0, 0, 255),
-                        4,
-                    )
+            overlay_label = "POINTS" if args.event_mode == "made-basket" else "NEAR-RIM EVENTS"
+            cv2.rectangle(frame, (20, 18), (390, 88), (15, 15, 15), -1)
+            cv2.putText(
+                frame,
+                f"{overlay_label}: {event_id}",
+                (35, 66),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1.15,
+                (255, 255, 255),
+                3,
+                cv2.LINE_AA,
+            )
+            if args.event_mode == "made-basket" and frame_index <= point_banner_until:
+                cv2.putText(
+                    frame,
+                    "POINT!",
+                    (width // 2 - 90, 90),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    1.8,
+                    (0, 255, 0),
+                    5,
+                    cv2.LINE_AA,
+                )
+            elif args.event_mode == "near-rim" and crossing_active:
+                cv2.putText(
+                    frame,
+                    "NEAR RIM",
+                    (width // 2 - 110, 90),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    1.5,
+                    (0, 0, 255),
+                    4,
+                    cv2.LINE_AA,
+                )
 
             frame_writer.writerow(
                 {

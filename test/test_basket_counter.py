@@ -1,12 +1,20 @@
 import unittest
 
-from scripts.detect_crossings import BasketCounter
+from scripts.detect_crossings import BasketCounter, Detection, best_detection
 
 
 NET_BOX = (100.0, 100.0, 140.0, 150.0)
 
 
 class BasketCounterTests(unittest.TestCase):
+    def test_class_specific_confidence_filter(self) -> None:
+        detections = [
+            Detection("ball", 0.12, (0.0, 0.0, 1.0, 1.0)),
+            Detection("ball", 0.18, (1.0, 1.0, 2.0, 2.0)),
+        ]
+
+        self.assertEqual(best_detection(detections, "ball", 0.15), detections[1])
+
     def test_counts_downward_rim_crossing(self) -> None:
         counter = BasketCounter()
 
